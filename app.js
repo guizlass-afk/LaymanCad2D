@@ -223,6 +223,23 @@
   function propagateAllPoints(entity) {
     (WELDABLE_KEYS[entity.type] || []).forEach(key => { const p = getPoint(entity, key); propagateWeld(entity.id, key, p.x, p.y); });
   }
+  function snapWholeEntityDelta(entity, orig, dx, dy) {
+    const tolWorld = 10 / state.view.scale;
+    let bestD = tolWorld, bestDx = dx, bestDy = dy;
+    for (const key of WELDABLE_KEYS[entity.type] || []) {
+      const origP = getPoint(orig, key);
+      const candidate = { x: origP.x + dx, y: origP.y + dy };
+      for (const other of state.entities) {
+        if (other.id === entity.id) continue;
+        for (const okey of WELDABLE_KEYS[other.type] || []) {
+          const target = getPoint(other, okey);
+          const d = dist(candidate, target);
+          if (d < bestD) { bestD = d; bestDx = target.x - origP.x; bestDy = target.y - origP.y; }
+        }
+      }
+    }
+    return { dx: bestDx, dy: bestDy };
+  }
   function removeFromWelds(entityId) {
     state.welds = state.welds.map(g => g.filter(m => m.id !== entityId)).filter(g => g.length > 1);
   }
@@ -635,9 +652,12 @@
     const { sx, sy, world } = pointerInfo(e);
     if (state.dragging) {
       const snappedNow = snapPoint(world, state.dragging.id);
-      const dx = snappedNow.x - state.dragging.start.x, dy = snappedNow.y - state.dragging.start.y;
+      let dx = snappedNow.x - state.dragging.start.x, dy = snappedNow.y - state.dragging.start.y;
       const entity = state.entities.find(en => en.id === state.dragging.id);
-      if (entity) { applyTranslatedFields(entity, state.dragging.orig, dx, dy); propagateAllPoints(entity); renderProperties(); }
+      if (entity) {
+        ({ dx, dy } = snapWholeEntityDelta(entity, state.dragging.orig, dx, dy));
+        applyTranslatedFields(entity, state.dragging.orig, dx, dy); propagateAllPoints(entity); renderProperties();
+      }
     } else if (state.pointDrag) {
       const snapped = snapPoint(world, state.pointDrag.id);
       const entity = state.entities.find(en => en.id === state.pointDrag.id);
@@ -653,7 +673,11 @@
     draw();
   });
   ui.canvas.addEventListener('pointerup', e => {
-    if (state.dragging) { pushHistory(); state.dragging = null; renderProperties(); ui.canvas.releasePointerCapture(e.pointerId); }
+    if (state.dragging) {
+      autoWeldEntity(state.dragging.id);
+      pushHistory(); state.dragging = null; renderProperties();
+      ui.canvas.releasePointerCapture(e.pointerId);
+    }
     if (state.pointDrag) {
       autoWeldEntity(state.pointDrag.id);
       pushHistory(); state.pointDrag = null; renderProperties();
