@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="pageTitle">LaymanCad 2D</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div><h1>Layman<span>Cad</span> 2D</h1></div>
+    <div class="top-actions">
+      <div class="privacy"><span class="status-dot"></span><span data-i18n="localProcessing">Processamento 100% local</span></div>
+      <div class="language-picker" id="languagePicker">
+        <button class="language-trigger" id="languageButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <img id="currentFlag" src="flags/br.svg" alt=""><span id="currentLanguage">Português</span><span class="language-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="language-menu" id="languageMenu" role="listbox" hidden>
+          <button type="button" role="option" data-language="pt-BR"><img src="flags/br.svg" alt="">Português</button>
+          <button type="button" role="option" data-language="en-US"><img src="flags/us.svg" alt="">English</button>
+          <button type="button" role="option" data-language="es-ES"><img src="flags/es.svg" alt="">Español</button>
+          <button type="button" role="option" data-language="zh-CN"><img src="flags/cn.svg" alt="">中文</button>
+          <button type="button" role="option" data-language="hi-IN"><img src="flags/in.svg" alt="">हिन्दी</button>
+          <button type="button" role="option" data-language="ar-SA"><img src="flags/sa.svg" alt="">العربية</button>
+          <button type="button" role="option" data-language="fr-FR"><img src="flags/fr.svg" alt="">Français</button>
+          <button type="button" role="option" data-language="bn-BD"><img src="flags/bd.svg" alt="">বাংলা</button>
+          <button type="button" role="option" data-language="ru-RU"><img src="flags/ru.svg" alt="">Русский</button>
+          <button type="button" role="option" data-language="de-DE"><img src="flags/de.svg" alt="">Deutsch</button>
+          <button type="button" role="option" data-language="it-IT"><img src="flags/it.svg" alt="">Italiano</button>
+          <button type="button" role="option" data-language="ja-JP"><img src="flags/jp.svg" alt="">日本語</button>
+        </div>
+        <select id="languageSelect" class="language-native-select" aria-hidden="true" tabindex="-1">
+          <option value="pt-BR">Português</option><option value="en-US">English</option><option value="es-ES">Español</option><option value="zh-CN">中文</option><option value="hi-IN">हिन्दी</option><option value="ar-SA">العربية</option><option value="fr-FR">Français</option><option value="bn-BD">বাংলা</option><option value="ru-RU">Русский</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+      <section class="step-card active">
+        <div class="section-title"><span class="step-number">1</span><div><h2 data-i18n="tools">Ferramentas</h2><p data-i18n="toolsHint">Escolha o que desenhar</p></div></div>
+        <div class="tool-grid" id="toolGrid">
+          <button type="button" class="tool-button active" data-tool="select" title="Selecionar" data-i18n-title="toolSelect">
+            <span class="tool-icon">⭠</span><span data-i18n="toolSelect">Selecionar</span>
+          </button>
+          <button type="button" class="tool-button" data-tool="line" title="Linha" data-i18n-title="toolLine">
+            <span class="tool-icon">╱</span><span data-i18n="toolLine">Linha</span>
+          </button>
+          <button type="button" class="tool-button" data-tool="rect" title="Retângulo" data-i18n-title="toolRect">
+            <span class="tool-icon">▭</span><span data-i18n="toolRect">Retângulo</span>
+          </button>
+          <button type="button" class="tool-button" data-tool="circle" title="Círculo" data-i18n-title="toolCircle">
+            <span class="tool-icon">◯</span><span data-i18n="toolCircle">Círculo</span>
+          </button>
+          <button type="button" class="tool-button" data-tool="arc" title="Arco" data-i18n-title="toolArc">
+            <span class="tool-icon">◜</span><span data-i18n="toolArc">Arco</span>
+          </button>
+        </div>
+        <p class="tool-hint" id="toolHint" data-i18n="hintSelect">Clique em uma peça para selecionar ou arraste para mover.</p>
+      </section>
+
+      <section class="step-card">
+        <div class="section-title"><span class="step-number">2</span><div><h2 data-i18n="grid">Grade e imã</h2><p data-i18n="dimensionsMm">Dimensões em milímetros</p></div></div>
+        <div class="field-grid two">
+          <label><span data-i18n="gridSpacing">Espaçamento</span>
+            <select id="gridSpacing">
+              <option value="1">1 mm</option>
+              <option value="5" selected>5 mm</option>
+              <option value="10">10 mm</option>
+              <option value="50">50 mm</option>
+            </select>
+          </label>
+          <label class="checkbox-field"><input type="checkbox" id="snapGrid" checked><span data-i18n="snapToGrid">Ajustar à grade</span></label>
+        </div>
+        <label class="checkbox-field wide-field"><input type="checkbox" id="snapPoints" checked><span data-i18n="snapToPoints">Ajustar a pontos existentes</span></label>
+      </section>
+
+      <section class="step-card properties-card" id="propertiesCard" hidden>
+        <div class="section-title"><span class="step-number">3</span><div><h2 data-i18n="properties">Propriedades</h2><p id="propertiesSubtitle"></p></div></div>
+        <div id="propertiesFields" class="field-grid two"></div>
+        <button id="deleteEntityButton" class="danger-button" type="button" data-i18n="deleteEntity">Excluir elemento</button>
+      </section>
+
+      <div class="sidebar-actions">
+        <button id="undoButton" class="icon-text-button" type="button" title="Desfazer" data-i18n-title="undo" disabled><span>↶</span><span data-i18n="undo">Desfazer</span></button>
+        <button id="redoButton" class="icon-text-button" type="button" title="Refazer" data-i18n-title="redo" disabled><span>↷</span><span data-i18n="redo">Refazer</span></button>
+        <button id="clearButton" class="icon-text-button" type="button" title="Limpar tudo" data-i18n-title="clearAll" disabled><span>🗑</span><span data-i18n="clearAll">Limpar tudo</span></button>
+      </div>
+
+      <div class="sidebar-actions">
+        <button id="saveProjectButton" class="secondary-button wide" type="button" data-i18n="saveProject">Salvar projeto</button>
+        <button id="openProjectButton" class="secondary-button wide" type="button" data-i18n="openProject">Abrir projeto</button>
+        <input id="openProjectInput" type="file" accept=".json" hidden>
+      </div>
+      <div id="message" class="message" role="status"></div>
+    </aside>
+
+    <section class="workspace">
+      <div class="workspace-toolbar">
+        <div>
+          <h2 data-i18n="drawing">Desenho</h2>
+          <p id="entitiesSubtitle" data-i18n="addToStart">Escolha uma ferramenta e comece a desenhar</p>
+        </div>
+        <div class="toolbar-actions">
+          <button id="fitButton" class="icon-button" title="Enquadrar desenho" data-i18n-title="fitDrawing">⌗</button>
+          <button id="exportButton" class="export-button" data-i18n="exportDxf">Exportar DXF</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="drawCanvas"></canvas>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-graphic"><span></span><span></span><span></span></div>
+          <h3 data-i18n="emptyTitle">Seu desenho aparecerá aqui</h3>
+          <p data-i18n-html="emptyBody">Escolha uma ferramenta ao lado, clique no quadro<br>para posicionar os pontos e ajuste os valores exatos em Propriedades.</p>
+        </div>
+        <div class="coord-readout" id="coordReadout">X: 0 mm · Y: 0 mm</div>
+        <div class="draw-tooltip" id="drawTooltip" hidden></div>
+        <div class="zoom-hint" data-i18n="zoomHint">Role para ampliar · Arraste o fundo para mover</div>
+      </div>
+
+      <div class="metrics" id="metrics">
+        <div><span class="metric-icon lines">╱</span><p data-i18n="entityLines">Linhas</p><strong id="metricLines">0</strong></div>
+        <div><span class="metric-icon rects">▭</span><p data-i18n="entityRects">Retângulos</p><strong id="metricRects">0</strong></div>
+        <div><span class="metric-icon circles">◯</span><p data-i18n="entityCircles">Círculos</p><strong id="metricCircles">0</strong></div>
+        <div><span class="metric-icon arcs">◜</span><p data-i18n="entityArcs">Arcos</p><strong id="metricArcs">0</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>LaymanCad 2D v1.0</span><span data-i18n="footerPrivacy">DXF ASCII · Todos os dados permanecem neste dispositivo</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
