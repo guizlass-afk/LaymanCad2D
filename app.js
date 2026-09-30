@@ -179,8 +179,30 @@
       else e.r = Math.max(0.001, dist({ x: e.cx, y: e.cy }, { x, y }));
     } else if (key === 'center') { e.cx = x; e.cy = y; }
     else {
-      const cur = pointOnCircle(e.cx, e.cy, e.r, key === 'start' ? e.a1 : e.a2);
-      e.cx += x - cur.x; e.cy += y - cur.y;
+      const otherKey = key === 'start' ? 'end' : 'start';
+      if (!isWelded(e.id, otherKey)) {
+        // only this end is anchored: keep the arc's shape, just slide it into place.
+        const cur = pointOnCircle(e.cx, e.cy, e.r, key === 'start' ? e.a1 : e.a2);
+        e.cx += x - cur.x; e.cy += y - cur.y;
+      } else {
+        // both ends are anchored (a closed contour): keep the other end fixed and
+        // reshape the arc (center/radius) so it passes through both anchors, keeping
+        // the same radius and bulge side whenever the anchors still allow it.
+        const anchor = getPoint(e, otherKey);
+        const moved = { x, y };
+        const d = Math.max(1e-9, dist(anchor, moved));
+        const r = d > 2 * e.r ? d / 2 + 1e-6 : e.r;
+        const mid = { x: (anchor.x + moved.x) / 2, y: (anchor.y + moved.y) / 2 };
+        const h = Math.sqrt(Math.max(0, r * r - (d / 2) * (d / 2)));
+        const ux = (moved.y - anchor.y) / d, uy = -(moved.x - anchor.x) / d;
+        const cand1 = { x: mid.x + ux * h, y: mid.y + uy * h };
+        const cand2 = { x: mid.x - ux * h, y: mid.y - uy * h };
+        const old = { x: e.cx, y: e.cy };
+        const center = dist(cand1, old) <= dist(cand2, old) ? cand1 : cand2;
+        e.cx = center.x; e.cy = center.y; e.r = r;
+        const startPos = key === 'start' ? moved : anchor, endPos = key === 'start' ? anchor : moved;
+        e.a1 = angleOfPoint(center, startPos); e.a2 = angleOfPoint(center, endPos);
+      }
     }
   }
   function entityCandidatePoints(e) { return (WELDABLE_KEYS[e.type] || []).map(key => getPoint(e, key)); }
