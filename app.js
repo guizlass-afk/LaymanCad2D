@@ -104,6 +104,15 @@
     return String(template).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? `{${name}}`);
   }
   function fmt(value, digits = 1) { return Number(value).toLocaleString(state.language, { maximumFractionDigits: digits }); }
+  function currentUnit() { return document.documentElement.dataset.unit === 'in' ? 'in' : 'mm'; }
+  let displayUnit = currentUnit();
+  function convertUnit(value, from, to) { if (!Number.isFinite(value) || from === to) return value; const mm = from === 'in' ? value * 25.4 : value; return to === 'in' ? mm / 25.4 : mm; }
+  function toMM(value) { return convertUnit(value, displayUnit, 'mm'); }
+  function fromMM(value) { return convertUnit(value, 'mm', displayUnit); }
+  function lengthDigits() { return displayUnit === 'in' ? 3 : 1; }
+  function formatPlain(value) { if (!Number.isFinite(value)) return ''; const digits = displayUnit === 'in' ? 3 : 2; return String(Math.round(value * 10 ** digits) / 10 ** digits); }
+  function formatLengthValue(mm, digits) { return fmt(fromMM(Number(mm)), digits ?? lengthDigits()); }
+  function formatLength(mm, digits) { return `${formatLengthValue(mm, digits)} ${displayUnit}`; }
   function round2(v) { return Math.round(v * 100) / 100; }
   function setMessage(text, type = '') { ui.message.textContent = text; ui.message.className = `message ${type}`.trim(); }
 
@@ -409,24 +418,24 @@
 
   // ---------- properties panel ----------
   function computeSubtitle(e) {
-    if (e.type === 'line') return `${t('entityLine')} · ${fmt(dist({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }))} mm · ${fmt(angleOfPoint({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }))}°`;
-    if (e.type === 'rect') return `${t('entityRect')} · ${fmt(Math.abs(e.x2 - e.x1))} × ${fmt(Math.abs(e.y2 - e.y1))} mm`;
-    if (e.type === 'circle') return `${t('entityCircle')} · Ø ${fmt(e.r * 2)} mm`;
-    return `${t('entityArc')} · R ${fmt(e.r)} mm`;
+    if (e.type === 'line') return `${t('entityLine')} · ${formatLength(dist({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }))} · ${fmt(angleOfPoint({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }))}°`;
+    if (e.type === 'rect') return `${t('entityRect')} · ${formatLengthValue(Math.abs(e.x2 - e.x1))} × ${formatLengthValue(Math.abs(e.y2 - e.y1))} ${displayUnit}`;
+    if (e.type === 'circle') return `${t('entityCircle')} · Ø ${formatLength(e.r * 2)}`;
+    return `${t('entityArc')} · R ${formatLength(e.r)}`;
   }
   function renderProperties() {
     const entity = state.entities.find(e => e.id === state.selectedId);
     if (!entity) { ui.propertiesCard.hidden = true; ui.propertiesFields.innerHTML = ''; return; }
     ui.propertiesCard.hidden = false;
     ui.propertiesFields.innerHTML = '';
-    const makeField = (labelKey, get, set, step) => {
+    const makeField = (labelKey, get, set, step, convert = true) => {
       const label = document.createElement('label');
       const span = document.createElement('span'); span.textContent = t(labelKey);
       const input = document.createElement('input');
-      input.type = 'number'; input.step = String(step || 0.1); input.value = round2(get());
+      input.type = 'number'; input.step = String(step || 0.1); input.value = convert ? formatPlain(fromMM(get())) : round2(get());
       input.addEventListener('input', () => {
-        const v = parseFloat(input.value);
-        if (Number.isFinite(v)) { set(v); propagateAllPoints(entity); ui.propertiesSubtitle.textContent = computeSubtitle(entity); draw(); }
+        const raw = parseFloat(input.value);
+        if (Number.isFinite(raw)) { const v = convert ? toMM(raw) : raw; set(v); propagateAllPoints(entity); ui.propertiesSubtitle.textContent = computeSubtitle(entity); draw(); }
       });
       input.addEventListener('change', () => pushHistory());
       label.appendChild(span); label.appendChild(input);
@@ -445,8 +454,8 @@
       makeField('fieldCenterX', () => entity.cx, v => entity.cx = v);
       makeField('fieldCenterY', () => entity.cy, v => entity.cy = v);
       makeField('fieldRadius', () => entity.r, v => { if (v > 0) entity.r = v; });
-      makeField('fieldStartAngle', () => entity.a1, v => entity.a1 = normalizeAngle(v), 1);
-      makeField('fieldEndAngle', () => entity.a2, v => entity.a2 = normalizeAngle(v), 1);
+      makeField('fieldStartAngle', () => entity.a1, v => entity.a1 = normalizeAngle(v), 1, false);
+      makeField('fieldEndAngle', () => entity.a2, v => entity.a2 = normalizeAngle(v), 1, false);
     }
     ui.propertiesSubtitle.textContent = computeSubtitle(entity);
   }
@@ -549,16 +558,16 @@
     if (state.draft) drawDraft(ctx);
   }
 
-  function updateCoordReadout(pt) { ui.coordReadout.textContent = `X: ${fmt(pt.x)} mm · Y: ${fmt(pt.y)} mm`; }
+  function updateCoordReadout(pt) { ui.coordReadout.textContent = `X: ${formatLength(pt.x)} · Y: ${formatLength(pt.y)}`; }
   function updateDraftTooltip(sx, sy) {
     const d = state.draft; if (!d || !d.preview) { ui.drawTooltip.hidden = true; return; }
     const p0 = d.points[0]; let text = '';
-    if (d.type === 'line') text = `${fmt(dist(p0, d.preview))} mm · ${fmt(angleOfPoint(p0, d.preview))}°`;
-    else if (d.type === 'rect') text = `${fmt(Math.abs(d.preview.x - p0.x))} × ${fmt(Math.abs(d.preview.y - p0.y))} mm`;
-    else if (d.type === 'circle') text = `R ${fmt(dist(p0, d.preview))} mm`;
+    if (d.type === 'line') text = `${formatLength(dist(p0, d.preview))} · ${fmt(angleOfPoint(p0, d.preview))}°`;
+    else if (d.type === 'rect') text = `${formatLengthValue(Math.abs(d.preview.x - p0.x))} × ${formatLengthValue(Math.abs(d.preview.y - p0.y))} ${displayUnit}`;
+    else if (d.type === 'circle') text = `R ${formatLength(dist(p0, d.preview))}`;
     else if (d.type === 'arc' && d.points.length === 2) {
       const arc = resolveArc(d.points[0], d.points[1], d.preview);
-      text = arc ? `R ${fmt(arc.r)} mm` : '';
+      text = arc ? `R ${formatLength(arc.r)}` : '';
     }
     if (!text) { ui.drawTooltip.hidden = true; return; }
     ui.drawTooltip.hidden = false; ui.drawTooltip.textContent = text;
@@ -795,8 +804,12 @@
   document.addEventListener('click', e => { if (!ui.languagePicker.contains(e.target)) setLanguageMenu(false); });
 
   document.addEventListener('themechange', draw);
+  document.addEventListener('unitchange', e => {
+    const next = e.detail.unit; if (next === displayUnit) return;
+    displayUnit = next; renderProperties(); draw();
+  });
   new ResizeObserver(resizeCanvas).observe(ui.canvasWrap);
-  window.LaymanCadCore = Object.freeze({ buildDxf, circumcenter, resolveArc, arcSamplePoints });
+  window.LaymanCadCore = Object.freeze({ buildDxf, circumcenter, resolveArc, arcSamplePoints, convertUnit, formatLength, formatLengthValue });
 
   // ---------- init ----------
   function loadAutosave() {
